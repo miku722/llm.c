@@ -1072,6 +1072,59 @@ int sample_mult(float* probabilities, int n, float coin) {
     return n - 1; // in case of rounding errors
 }
 
+void generate_one_turn_reply_from_tokens(GPT2* model, Tokenizer* tokenizer, int* prompt_tokens, int num_prompt_tokens, int B, int T, int genT) {
+    // 创建 token 序列 buffer
+    int* gen_tokens = (int*)mallocCheck(B * T * sizeof(int));
+    
+    // 拷贝 prompt token 到 gen_tokens
+    memcpy(gen_tokens, prompt_tokens, num_prompt_tokens * sizeof(int));
+
+    // 打印 prompt（可选）
+    printf("\nUser prompt token ids: ");
+    for (int i = 0; i < num_prompt_tokens; i++) {
+        printf("%d ", prompt_tokens[i]);
+    }
+    printf("\nAI: ");
+
+    // 开始采样生成回复
+    uint64_t rng_state = 1337;
+    for (int t = num_prompt_tokens; t < genT; t++) {
+        gpt2_forward(model, gen_tokens, NULL, B, T);
+        float* probs = model->acts.probs + (t - 1) * model->config.padded_vocab_size;
+        float coin = random_f32(&rng_state);
+        int next_token = sample_mult(probs, model->config.vocab_size, coin);
+        gen_tokens[t] = next_token;
+
+        // 解码输出
+        const char* token_str = tokenizer_decode(tokenizer, next_token);
+        safe_printf(token_str);
+        if (next_token == tokenizer->eot_token) break;
+        fflush(stdout);
+    }
+
+    printf("\n");
+    free(gen_tokens);
+}
+
+
+// 计算某个token的log概率
+float compute_log_prob(float* logits, int vocab_size, int target_token) {
+    // 找最大logit，防止数值溢出
+    float max_logit = logits[0];
+    for (int i = 1; i < vocab_size; ++i) {
+        if (logits[i] > max_logit) max_logit = logits[i];
+    }
+    // 计算log-sum-exp
+    float sum_exp = 0.0f;
+    for (int i = 0; i < vocab_size; ++i) {
+        sum_exp += expf(logits[i] - max_logit);
+    }
+    float log_sum_exp = logf(sum_exp);
+
+    // 目标token的log概率 = logit(target) - max_logit - log_sum_exp
+    return logits[target_token] - max_logit - log_sum_exp;
+}
+
 // ----------------------------------------------------------------------------
 // main training loop
 int main() {
@@ -1108,6 +1161,32 @@ int main() {
     // train
     struct timespec start, end;
     for (int step = 0; step <= 40; step++) {
+        // 计算验证集perplexity
+        if (step % 10 == 0) {
+            double total_neg_log_likelihood = 0.0;
+            int total_tokens = 0;
+            dataloader_reset(&val_loader);
+            for (int i = 0; i < val_num_batches; i++) {
+                dataloader_next_batch(&val_loader);
+                gpt2_forward(&model, val_loader.inputs, val_loader.targets, B, T);
+
+                int vocab_size = model.config.vocab_size;
+                for (int b = 0; b < B; ++b) {
+                    for (int t = 0; t < T; ++t) {
+                        int idx = b * T + t;
+                        int target_token = val_loader.targets[idx];
+                        float* logits = model.acts.logits + idx * model.config.padded_vocab_size;
+
+                        float log_prob = compute_log_prob(logits, vocab_size, target_token);
+                        total_neg_log_likelihood += -log_prob;
+                        total_tokens += 1;
+                    }
+                }
+            }
+            double avg_nll = total_neg_log_likelihood / total_tokens;
+            double perplexity = exp(avg_nll);
+            printf("val perplexity: %.4f (avg NLL: %.4f over %d tokens)\n", perplexity, avg_nll, total_tokens);
+        }
 
         // once in a while estimate the validation loss
         if (step % 10 == 0) {
@@ -1170,6 +1249,11 @@ int main() {
         double time_elapsed_s = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
         printf("step %d: train loss %f (took %f ms)\n", step, model.mean_loss, time_elapsed_s * 1000);
     }
+
+    int prompt_tokens[] = {50256, 464, 345, 10238, 257, 1363, 11268, 11368, 805, 50}; // 50256 是 GPT-2 的起始token
+    int num_prompt_tokens = sizeof(prompt_tokens) / sizeof(int);
+
+    generate_one_turn_reply_from_tokens(&model, &tokenizer, prompt_tokens, num_prompt_tokens, B, T, 64);
 
     // free
     dataloader_free(&train_loader);
