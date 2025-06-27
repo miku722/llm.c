@@ -1072,41 +1072,6 @@ int sample_mult(float* probabilities, int n, float coin) {
     return n - 1; // in case of rounding errors
 }
 
-void generate_one_turn_reply_from_tokens(GPT2* model, Tokenizer* tokenizer, int* prompt_tokens, int num_prompt_tokens, int B, int T, int genT) {
-    // 创建 token 序列 buffer
-    int* gen_tokens = (int*)mallocCheck(B * T * sizeof(int));
-    
-    // 拷贝 prompt token 到 gen_tokens
-    memcpy(gen_tokens, prompt_tokens, num_prompt_tokens * sizeof(int));
-
-    // 打印 prompt（可选）
-    printf("\nUser prompt token ids: ");
-    for (int i = 0; i < num_prompt_tokens; i++) {
-        printf("%d ", prompt_tokens[i]);
-    }
-    printf("\nAI: ");
-
-    // 开始采样生成回复
-    uint64_t rng_state = 1337;
-    for (int t = num_prompt_tokens; t < genT; t++) {
-        gpt2_forward(model, gen_tokens, NULL, B, T);
-        float* probs = model->acts.probs + (t - 1) * model->config.padded_vocab_size;
-        float coin = random_f32(&rng_state);
-        int next_token = sample_mult(probs, model->config.vocab_size, coin);
-        gen_tokens[t] = next_token;
-
-        // 解码输出
-        const char* token_str = tokenizer_decode(tokenizer, next_token);
-        safe_printf(token_str);
-        if (next_token == tokenizer->eot_token) break;
-        fflush(stdout);
-    }
-
-    printf("\n");
-    free(gen_tokens);
-}
-
-
 // 计算某个token的log概率
 float compute_log_prob(float* logits, int vocab_size, int target_token) {
     // 找最大logit，防止数值溢出
@@ -1249,12 +1214,6 @@ int main() {
         double time_elapsed_s = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
         printf("step %d: train loss %f (took %f ms)\n", step, model.mean_loss, time_elapsed_s * 1000);
     }
-
-    int prompt_tokens[] = {50256, 464, 345, 10238, 257, 1363, 11268, 11368, 805, 50}; // 50256 是 GPT-2 的起始token
-    int num_prompt_tokens = sizeof(prompt_tokens) / sizeof(int);
-
-    generate_one_turn_reply_from_tokens(&model, &tokenizer, prompt_tokens, num_prompt_tokens, B, T, 64);
-
     // free
     dataloader_free(&train_loader);
     dataloader_free(&val_loader);
