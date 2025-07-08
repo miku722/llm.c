@@ -786,31 +786,41 @@ void gpt2_forward(GPT2 *model, int* inputs, int* targets, size_t B, size_t T) {
         }
     }
 
-    // allocate space for all the activations if needed (done here, lazily)
-    if(model->acts_memory == NULL) {
-        // record the current B,T as well
-        model->batch_size = B;
-        model->seq_len = T;
-        // and now allocate the space
-        fill_in_activation_sizes(model->act_sizes, model->config, B, T);
-        size_t num_activations = 0;
-        for (size_t i = 0; i < NUM_ACTIVATION_TENSORS; i++) {
-            num_activations += model->act_sizes[i];
-        }
-        printf("num_activations: %zu\n", num_activations);
-        model->num_activations = num_activations;
-        model->acts_memory = malloc_and_point_activations(&model->acts, model->act_sizes);
-        // also create memory for caching inputs and targets
-        model->inputs = (int*)mallocCheck(B * T * sizeof(int));
-        model->targets = (int*)mallocCheck(B * T * sizeof(int)); // might be unused if we never have targets but it's small
-    } else {
-        // validate B,T is consistent with how we've allocated the memory before
-        // in principle we could get more clever here in the future, for now this is safest
-        if (B != model->batch_size || T != model->seq_len) {
-            printf("Model: B=%d T=%d, Desired: B=%d T=%d\n", model->batch_size, model->seq_len, (int)B, (int)T);
-            exit(EXIT_FAILURE);
-        }
+// 动态判断是否需要重新分配（首次或大小变化）
+if (model->acts_memory == NULL ||
+    B != model->batch_size || T != model->seq_len) {
+
+    // 如果已经分配过，先释放旧内存
+    if (model->acts_memory) {
+        free(model->acts_memory);
+        model->acts_memory = NULL;
     }
+    if (model->inputs) {
+        free(model->inputs);
+        model->inputs = NULL;
+    }
+    if (model->targets) {
+        free(model->targets);
+        model->targets = NULL;
+    }
+
+    // 更新 batch 和序列长度记录
+    model->batch_size = B;
+    model->seq_len = T;
+
+    // 分配激活内存
+    fill_in_activation_sizes(model->act_sizes, model->config, B, T);
+    size_t num_activations = 0;
+    for (size_t i = 0; i < NUM_ACTIVATION_TENSORS; i++) {
+        num_activations += model->act_sizes[i];
+    }
+    model->num_activations = num_activations;
+    model->acts_memory = malloc_and_point_activations(&model->acts, model->act_sizes);
+
+    // 分配输入和目标缓冲区
+    model->inputs = (int *)mallocCheck(B * T * sizeof(int));
+    model->targets = (int *)mallocCheck(B * T * sizeof(int));  // 即使没用也占位
+}
 
     // cache the inputs/targets
     memcpy(model->inputs, inputs, B * T * sizeof(int));

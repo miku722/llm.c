@@ -34,3 +34,11 @@ dev/cuda/global_norm
 
 # log files
 *.log
+.conda/*
+dev/.DS_Store
+.DS_Store
+gpt2_inference
+train_gpt2.dSYM/Contents/Info.plist
+train_gpt2.dSYM/Contents/Resources/Relocations/aarch64/train_gpt2.yml
+gpt2_inference.dSYM/Contents/Info.plist
+gpt2_inference.dSYM/Contents/Resources/Relocations/aarch64/gpt2_inference.yml
