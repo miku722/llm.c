@@ -267,7 +267,7 @@ train_gpt2: train_gpt2.c
 test_gpt2: test_gpt2.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $^ $(LDLIBS) $(OUTPUT_FILE)
 
-gpt2_inference: gpt2_inference.c
+gpt2_inference: benchmark/gpt2_inference.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $^ $(LDLIBS) $(OUTPUT_FILE)
 
 $(NVCC_CUDNN): llmc/cudnn_att.cpp

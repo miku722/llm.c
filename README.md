@@ -76,6 +76,15 @@ Allay
 ---
 ```
 
+### quick start (CPU Benchmark evaluate）
+```bash
+python benchmark/download.py
+python benchmark/gpt2_tokenize.py
+make gpt2_inference
+OMP_NUM_THREADS=8 ./gpt2_inference
+
+```
+
 ## datasets
 
 The data files inside `/dev/data/(dataset).py` are responsible for downloading, tokenizing and saving the tokens to .bin files, readable easily from C. So for example when you run:

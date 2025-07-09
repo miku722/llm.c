@@ -1,5 +1,5 @@
 #define TESTING
-#include "train_gpt2.c"
+#include "./train_gpt2.c"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,9 +14,10 @@ int main(int argc, char *argv[]) {
     GPT2 model;
     gpt2_build_from_checkpoint(&model, "gpt2_124M.bin");
 
-    FILE *fp = fopen("dev/data/benchmark/tokenized/lambada_token_ids.txt", "r");
+    FILE *fp = fopen("benchmark/tokenized/lambada_token_ids.txt", "r");
     if (!fp) {
         fprintf(stderr, "Cannot open file.\n");
+        perror("fopen failed");
         return 1;
     }
 

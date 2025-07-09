@@ -5,8 +5,12 @@ import os
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
 # 输入和输出文件路径
-input_file = "dev/data/benchmark/lambada-dataset/lambada_test_plain_text.txt"
-output_file = "dev/data/benchmark/tokenized/lambada_token_ids.txt"
+input_file = "benchmark/datasets/lambada_test_plain_text.txt"
+output_file = "benchmark/tokenized/lambada_token_ids.txt"
+
+# 自动创建输出目录（如果不存在）
+output_dir = "benchmark/tokenized"
+os.makedirs(output_dir, exist_ok=True)
 
 with open(input_file, "r", encoding="utf-8") as fin, open(output_file, "w", encoding="utf-8") as fout:
     for line in fin:
