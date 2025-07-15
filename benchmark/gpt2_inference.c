@@ -1,5 +1,5 @@
 #define TESTING
-#include "./train_gpt2.c"
+#include "../train_gpt2.c"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +7,7 @@
 #include <math.h>
 
 #define MAX_TOKENS_PER_LINE 1024
-#define LOG_FIRST_N 100  // 前多少个样本打印详细 token
+#define LOG_FIRST_N 0  // 前多少个样本打印详细 token
 #define PRINT_WRONG_CASES 0 // 是否打印错误样本日志
 
 int main(int argc, char *argv[]) {
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
         if (n_tokens < 2) continue;
 
         int prompt_len = n_tokens - 1;
-        int target_token = tokens[n_tokens - 1];
+        int target_token = tokens[n_tokens - 1]; // gukai@20250715: The last token is the target
 
         gpt2_forward(&model, tokens, NULL, 1, prompt_len);
 
