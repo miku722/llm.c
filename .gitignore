@@ -80,3 +80,9 @@ benchmark/datasets/lambada-vocab-2.txt
 benchmark/datasets/readme-up.txt
 benchmark/datasets/train-novels.tar
 benchmark/__pycache__/tokenize.cpython-39.pyc
+benchmark/cbttest_evaluate.dSYM/Contents/Info.plist
+benchmark/cbttest_evaluate.dSYM/Contents/Resources/DWARF/cbttest_evaluate
+benchmark/cbttest_evaluate.dSYM/Contents/Resources/Relocations/aarch64/cbttest_evaluate.yml
+benchmark/cbttest_evaluate
+benchmark/datasets/CBTest/data/cbt_full_context.txt
+benchmark/tokenized/cbtest_CN_token_ids.txt
